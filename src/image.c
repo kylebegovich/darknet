@@ -684,6 +684,16 @@ void save_image_png(image im, const char *name)
     if(!success) fprintf(stderr, "Failed to write image %s\n", buff);
 }
 
+
+/*
+ * Function:  save_video
+ * --------------------
+ * writes the current frame (image) to the video writer
+ *
+ *  p: the image to be save
+ *  mVideoWriter: openCV video writer to save the image to
+ *
+ */
 void save_video(image p, CvVideoWriter *mVideoWriter)
 {
     image copy = copy_image(p);

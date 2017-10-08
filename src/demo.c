@@ -135,22 +135,28 @@ void *detect_loop(void *ptr)
     }
 }
 
-// counter function for testing drawing on image
-void *counter_func(void *ptr)
+/*
+ * Function:  counter_func
+ * --------------------
+ * a test function for multithread.
+ * increments the counter and draw a vertical line respective to the counter
+ *
+ *
+ */void *counter_func(void *ptr)
 {
-    counter += 1;
-    // get the current frame
-    image display = buff[(buff_index+2) % 3];
-    // set the color to greenish color
+    counter += 1; /* increment the counter */
+    
+    image display = buff[(buff_index+2) % 3]; /* get the current frame image */
+    
+    /* set up color and width */
     float red = 0.1;
     float green = 0.5;
     float blue = 0.2;
     int width = 8;
-    // draw vertical line respect to the counter
-    draw_vertical_line(display, counter, width, red, green, blue);
+    
+    draw_vertical_line(display, counter, width, red, green, blue); /*draw vertical line respective to counter */
 
-    if(counter >= display.w) counter = 0;
-    //printf("Count: %d, %d\n", counter, boxes[0]);
+    if(counter >= display.w) counter = 0; /* reset counter if it went over width */
     return 0;
 }
 
@@ -172,9 +178,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     set_batch_network(&net, 1);
     pthread_t detect_thread;
     pthread_t fetch_thread;
-
-    //added counter thread
-    pthread_t counter_thread;
+    pthread_t counter_thread; /*added counter thread */
 
     srand(2222222);
 
@@ -224,8 +228,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff_letter[1] = letterbox_image(buff[0], net.w, net.h);
     buff_letter[2] = letterbox_image(buff[0], net.w, net.h);
     ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
-    //initilizating counter
-    counter = 0;
+    
+    counter = 0; /*initilizating counter*/
 
     int count = 0;
     if(!prefix){
@@ -244,22 +248,25 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-        // creating counter thread
-        if(pthread_create(&counter_thread, 0, counter_func, 0)) error("Counter Thread creation failed");
+
+        if(pthread_create(&counter_thread, 0, counter_func, 0)) error("Counter Thread creation failed"); /* create the counter thread*/
+        
         if(!prefix){
             fps = 1./(get_wall_time() - demo_time);
             demo_time = get_wall_time();
-            image im = buff[(buff_index + 1)%3];                        
+            image im = buff[(buff_index + 1)%3];      
+
             #ifdef SAVEVIDEO
-            save_video(im, mVideoWriter);
+            save_video(im, mVideoWriter); /* save the current frame */
             #endif
+            
             display_in_thread(0);
         }else{
             char name[256];
             sprintf(name, "%s_%08d", prefix, count);
             image im = buff[(buff_index + 1)%3];            
             #ifdef SAVEVIDEO
-            save_video(im, mVideoWriter);
+            save_video(im, mVideoWriter); /* save the current frame */
             #else
             save_image(im, name);
             #endif
@@ -267,7 +274,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         pthread_join(fetch_thread, 0);
         pthread_join(detect_thread, 0);
         // joining back thread
-        pthread_join(counter_thread, 0);
+        pthread_join(counter_thread, 0); /* joins the counter_thread back to main process */
         ++count;
     }
 }
