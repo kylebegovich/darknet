@@ -83,6 +83,8 @@ void *detect_in_thread(void *ptr)
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
     image display = buff[(buff_index+2) % 3];
+
+    /* duplicate function of draw_detections that writes the info of detected obj to result */
     draw_detections_info(display, demo_detections, demo_thresh, boxes, probs, 0, demo_names, demo_alphabet, demo_classes, result);
     
     demo_index = (demo_index + 1)%demo_frame;
@@ -140,7 +142,7 @@ void *detect_loop(void *ptr)
  * --------------------
  * a test function for multithread.
  * increments the counter and draw a vertical line respective to the counter
- *
+ * check if current counter is inbetween any detected box. If so, change color.
  *
  */
 void *counter_func(void *ptr)
@@ -154,9 +156,10 @@ void *counter_func(void *ptr)
     float green = 0.5;
     float blue = 0.2;
     int width = 8;
-    if(result[0].n > 0)
+    if(result[0].n > 0) /* check if any obj is detected */
     {    
         printf("num detect %d\n", result[0].n);
+        /* loop throug the object to check if x is bounded by x */
         for(int j = 1; j < result[0].n+1; j++){
             int x1 = result[j].left;
             int x2 = result[j].right;
@@ -215,7 +218,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         }
     }
     
-    // constructing video maker to save later
+    /*
+    * initilize the cv Video Writer 
+    */
     #ifdef SAVEVIDEO
     if(cap){
         int mfps = cvGetCaptureProperty(cap,CV_CAP_PROP_FPS);
@@ -245,7 +250,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
     
     counter = 0; /*initilizating counter*/
-    result = calloc(1000, sizeof(info)); /* initilizating info pointer */
+    result = calloc(1000, sizeof(info)); /* initilizating info pointer assuming we will never detect more than 10000 items*/
 
     int count = 0;
     if(!prefix){

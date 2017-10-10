@@ -258,10 +258,6 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
 {
     int i;
 
-    int l = 0;
-    //mystruct* objects = malloc(sizeof(mystruct)*1000); /* new struct 'by Chen' to save information of ouput */
-
-
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
         float prob = probs[i][class];
@@ -291,14 +287,6 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            // objects[l].left=left; /* store info into objects */
-            // objects[l].right=right;
-            // objects[l].top=top;
-            // objects[l].bot=bot;
-            // objects[l].prob=prob*100;
-            // objects[l].name=names[class];
-            // l++;
-
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
                 image label = get_label(alphabet, names[class], (im.h*.03)/10);
@@ -319,7 +307,23 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
    
 }
 
-
+/*
+ * Function:  draw_detections_info 
+ * --------------------
+ *  draws the detected box and writes the meta data to result
+ *
+ *  im: input image
+ *  num: demo_detections (num of pixels)
+ *  thresh: thresh to bound probability
+ *  boxes: the box coordinate to be drawn
+ *  probs: the prob of each class at point i
+ *  masks: ...
+ *  names: names of the classes
+ *  alphebet: ...
+ *  class: number of classes
+ *  result: info ptr to store meta data
+ *
+ */
 void draw_detections_info(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes, info* result)
 {
     int i;
