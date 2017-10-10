@@ -556,21 +556,16 @@ typedef struct{
 
 // new struct to store the predicted outputs
 // prob need to rename this
-typedef struct my_struct{
+typedef struct info{
+    int n; /* num of detected objs */
     int top;
     int bot;
     int left;
     int right;
     char*name;
     float prob;
-} mystruct;
+} info;
 
-typedef struct result{
-    float *probs;
-    box *boxes;
-    int n;
-    int *classes;
-} result;
 
 network load_network(char *cfg, char *weights, int clear);
 network *load_network_p(char *cfg, char *weights, int clear);
@@ -709,6 +704,7 @@ data load_all_cifar10();
 box_label *read_boxes(char *filename, int *n);
 box float_to_box(float *f, int stride);
 void draw_detections(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes);
+void draw_detections_info(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes, info* result);
 
 matrix network_predict_data(network net, data test);
 image **load_alphabet();

@@ -32,10 +32,10 @@ static float fps = 0;
 static float demo_thresh = 0;
 static float demo_hier = .5;
 static int running = 0;
-static result results;
 
 //added counter
 static int counter;
+static info * result;
 
 static int demo_frame = 5;
 static int demo_detections = 0;
@@ -44,7 +44,6 @@ static int demo_index = 0;
 static int demo_done = 0;
 static float *avg;
 double demo_time;
-
 
 
 double get_wall_time()
@@ -84,7 +83,8 @@ void *detect_in_thread(void *ptr)
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
     image display = buff[(buff_index+2) % 3];
-    draw_detections(display, demo_detections, demo_thresh, boxes, probs, 0, demo_names, demo_alphabet, demo_classes);
+    draw_detections_info(display, demo_detections, demo_thresh, boxes, probs, 0, demo_names, demo_alphabet, demo_classes, result);
+    
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
 
@@ -142,7 +142,8 @@ void *detect_loop(void *ptr)
  * increments the counter and draw a vertical line respective to the counter
  *
  *
- */void *counter_func(void *ptr)
+ */
+void *counter_func(void *ptr)
 {
     counter += 1; /* increment the counter */
     
@@ -153,6 +154,18 @@ void *detect_loop(void *ptr)
     float green = 0.5;
     float blue = 0.2;
     int width = 8;
+    if(result[0].n > 0)
+    {    
+        printf("num detect %d\n", result[0].n);
+        for(int j = 1; j < result[0].n+1; j++){
+            int x1 = result[j].left;
+            int x2 = result[j].right;
+            if(x1 <= counter && x2 >= counter){
+                red = 1.0;
+                break;
+            }
+        }
+    }   
     
     draw_vertical_line(display, counter, width, red, green, blue); /*draw vertical line respective to counter */
 
@@ -164,6 +177,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 {
     demo_frame = avg_frames;
     predictions = calloc(demo_frame, sizeof(float*));
+    
+    
     image **alphabet = load_alphabet();
     demo_names = names;
     demo_alphabet = alphabet;
@@ -230,6 +245,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
     
     counter = 0; /*initilizating counter*/
+    result = calloc(1000, sizeof(info)); /* initilizating info pointer */
 
     int count = 0;
     if(!prefix){
@@ -248,7 +264,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-
         if(pthread_create(&counter_thread, 0, counter_func, 0)) error("Counter Thread creation failed"); /* create the counter thread*/
         
         if(!prefix){
@@ -264,19 +279,23 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         }else{
             char name[256];
             sprintf(name, "%s_%08d", prefix, count);
-            image im = buff[(buff_index + 1)%3];            
+            image im = buff[(buff_index + 1)%3];   
+
             #ifdef SAVEVIDEO
             save_video(im, mVideoWriter); /* save the current frame */
             #else
             save_image(im, name);
             #endif
+
         }
         pthread_join(fetch_thread, 0);
         pthread_join(detect_thread, 0);
-        // joining back thread
         pthread_join(counter_thread, 0); /* joins the counter_thread back to main process */
         ++count;
+        
+        
     }
+    free(result);
 }
 
 void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)

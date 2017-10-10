@@ -320,12 +320,14 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
 }
 
 
-void draw_detections_info(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes, info* result)
+info* draw_detections_info(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes)
 {
     int i;
     
-    int l = 1;
-    result[0].n = 0;
+    int l = 0;
+    info *result = calloc(1, sizeof(result));
+    result->n = 0;
+    result->data = calloc(100, sizeof(mystruct));
 
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
@@ -356,12 +358,12 @@ void draw_detections_info(image im, int num, float thresh, box *boxes, float **p
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            result[l].left=left; /* store info into objects */
-            result[l].right=right;
-            result[l].top=top;
-            result[l].bot=bot;
-            result[l].prob=prob*100;
-            result[l].name=names[class];
+            result->data[l].left=left; /* store info into objects */
+            result->data[l].right=right;
+            result->data[l].top=top;
+            result->data[l].bot=bot;
+            result->data[l].prob=prob*100;
+            result->data[l].name=names[class];
             l++;
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
@@ -385,8 +387,8 @@ void draw_detections_info(image im, int num, float thresh, box *boxes, float **p
     // for(int i=0;i<l;i++){
     //         printf("name:%s top:%i bot:%i left:%i right:%i probability:%f \n",objects[i].name,objects[i].top,objects[i].bot,objects[i].left,objects[i].right,objects[i].prob);
     // }
-    result[0].n = l-1;
-    
+    result->n = l;
+    return result;
 
 }
 
@@ -763,7 +765,6 @@ void save_image_png(image im, const char *name)
 }
 
 
-#ifdef OPENCV
 /*
  * Function:  save_video
  * --------------------
@@ -792,7 +793,6 @@ void save_video(image p, CvVideoWriter *mVideoWriter)
     cvReleaseImage(&disp);
     free_image(copy);
 }
-#endif 
 
 void save_image(image im, const char *name)
 {
