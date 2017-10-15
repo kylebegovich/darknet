@@ -20,8 +20,8 @@ static char **demo_names;
 static image **demo_alphabet;
 static int demo_classes;
 
-static float **probs;
-static box *boxes;
+static float ***probs; // **probs to ***probs
+static box **boxes; // *boxes to **boxes
 static network net;
 static image buff [3];
 static image buff_letter[3];
@@ -37,9 +37,12 @@ static int running = 0;
 static int counter;
 static info * result;
 
+// added the number of instances for YOLO
+static int YOLO = 1;
+
 static int demo_frame = 5;
 static int demo_detections = 0;
-static float **predictions;
+static float ***predictions; // **predictions to ***predictions
 static int demo_index = 0;
 static int demo_done = 0;
 static float *avg;
@@ -66,17 +69,17 @@ void *detect_in_thread(void *ptr)
     float *X = buff_letter[(buff_index+2)%3].data;
     float *prediction = network_predict(net, X);
 
-    memcpy(predictions[demo_index], prediction, l.outputs*sizeof(float));
-    mean_arrays(predictions, demo_frame, l.outputs, avg);
+    memcpy(predictions[0][demo_index], prediction, l.outputs*sizeof(float));
+    mean_arrays(predictions[0], demo_frame, l.outputs, avg);
     l.output = avg;
     if(l.type == DETECTION){
-        get_detection_boxes(l, 1, 1, demo_thresh, probs, boxes, 0);
+        get_detection_boxes(l, 1, 1, demo_thresh, probs[0], boxes[0], 0);
     } else if (l.type == REGION){
-        get_region_boxes(l, buff[0].w, buff[0].h, net.w, net.h, demo_thresh, probs, boxes, 0, 0, 0, demo_hier, 1);
+        get_region_boxes(l, buff[0].w, buff[0].h, net.w, net.h, demo_thresh, probs[0], boxes[0], 0, 0, 0, demo_hier, 1);
     } else {
         error("Last layer must produce detections\n");
     }
-    if (nms > 0) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
+    if (nms > 0) do_nms_obj(boxes[0], probs[0], l.w*l.h*l.n, l.classes, nms);
 
     printf("\033[2J");
     printf("\033[1;1H");
@@ -85,8 +88,8 @@ void *detect_in_thread(void *ptr)
     image display = buff[(buff_index+2) % 3];
 
     /* duplicate function of draw_detections that writes the info of detected obj to result */
-    draw_detections_info(display, demo_detections, demo_thresh, boxes, probs, 0, demo_names, demo_alphabet, demo_classes, result);
-    
+    draw_detections_info(display, demo_detections, demo_thresh, boxes[0], probs[0], 0, demo_names, demo_alphabet, demo_classes, result);
+
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
 
@@ -148,16 +151,16 @@ void *detect_loop(void *ptr)
 void *counter_func(void *ptr)
 {
     counter += 1; /* increment the counter */
-    
+
     image display = buff[(buff_index+2) % 3]; /* get the current frame image */
-    
+
     /* set up color and width */
     float red = 0.1;
     float green = 0.5;
     float blue = 0.2;
     int width = 8;
     if(result[0].n > 0) /* check if any obj is detected */
-    {    
+    {
         printf("num detect %d\n", result[0].n);
         /* loop throug the object to check if x is bounded by x */
         for(int j = 1; j < result[0].n+1; j++){
@@ -168,8 +171,8 @@ void *counter_func(void *ptr)
                 break;
             }
         }
-    }   
-    
+    }
+
     draw_vertical_line(display, counter, width, red, green, blue); /*draw vertical line respective to counter */
 
     if(counter >= display.w) counter = 0; /* reset counter if it went over width */
@@ -179,9 +182,13 @@ void *counter_func(void *ptr)
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
     demo_frame = avg_frames;
-    predictions = calloc(demo_frame, sizeof(float*));
-    
-    
+
+    // added another layer for predictions
+    predictions = (float***) calloc(YOLO, sizeof(float*));
+    for (int i = 0; i < YOLO; i++) {
+      predictions[i] = (float**) calloc(demo_frame, sizeof(float*));
+    }
+
     image **alphabet = load_alphabet();
     demo_names = names;
     demo_alphabet = alphabet;
@@ -217,9 +224,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             cvSetCaptureProperty(cap, CV_CAP_PROP_FPS, frames);
         }
     }
-    
+
     /*
-    * initilize the cv Video Writer 
+    * initilize the cv Video Writer
     */
     #ifdef SAVEVIDEO
     if(cap){
@@ -235,11 +242,21 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     int j;
 
     avg = (float *) calloc(l.outputs, sizeof(float));
-    for(j = 0; j < demo_frame; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
+    for(j = 0; j < demo_frame; ++j) predictions[0][j] = (float *) calloc(l.outputs, sizeof(float));
 
-    boxes = (box *)calloc(l.w*l.h*l.n, sizeof(box));
-    probs = (float **)calloc(l.w*l.h*l.n, sizeof(float *));
-    for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float *)calloc(l.classes+1, sizeof(float));
+    // added another layer for boxes
+    boxes = (box **)calloc(l.w*l.h*l.n, sizeof(box));
+    for (int i = 0; i < YOLO; i++) {
+      boxes[i] = (box*) calloc(l.w*l.h*l.n, sizeof(box));
+    }
+
+    // added another layer for probs
+    probs = (float ***)calloc(l.w*l.h*l.n, sizeof(float *));
+    for (int i = 0; i < YOLO; i++) {
+      probs[i] = (float**) calloc(l.w*l.h*l.n, sizeof(float *));
+    }
+
+    for(j = 0; j < l.w*l.h*l.n; ++j) probs[0][j] = (float *)calloc(l.classes+1, sizeof(float));
 
     buff[0] = get_image_from_stream(cap);
     buff[1] = copy_image(buff[0]);
@@ -248,7 +265,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff_letter[1] = letterbox_image(buff[0], net.w, net.h);
     buff_letter[2] = letterbox_image(buff[0], net.w, net.h);
     ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
-    
+
     counter = 0; /*initilizating counter*/
     result = calloc(1000, sizeof(info)); /* initilizating info pointer assuming we will never detect more than 10000 items*/
 
@@ -270,21 +287,21 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&counter_thread, 0, counter_func, 0)) error("Counter Thread creation failed"); /* create the counter thread*/
-        
+
         if(!prefix){
             fps = 1./(get_wall_time() - demo_time);
             demo_time = get_wall_time();
-            image im = buff[(buff_index + 1)%3];      
+            image im = buff[(buff_index + 1)%3];
 
             #ifdef SAVEVIDEO
             save_video(im, mVideoWriter); /* save the current frame */
             #endif
-            
+
             display_in_thread(0);
         }else{
             char name[256];
             sprintf(name, "%s_%08d", prefix, count);
-            image im = buff[(buff_index + 1)%3];   
+            image im = buff[(buff_index + 1)%3];
 
             #ifdef SAVEVIDEO
             save_video(im, mVideoWriter); /* save the current frame */
@@ -297,8 +314,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         pthread_join(detect_thread, 0);
         pthread_join(counter_thread, 0); /* joins the counter_thread back to main process */
         ++count;
-        
-        
+
+
     }
     free(result);
 }
@@ -306,7 +323,13 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
     demo_frame = avg_frames;
-    predictions = calloc(demo_frame, sizeof(float*));
+
+    // added another layer for predictions
+    predictions = (float***) calloc(YOLO, sizeof(float*));
+    for (int i = 0; i < YOLO; i++) {
+      predictions[i] = (float**) calloc(demo_frame, sizeof(float*));
+    }
+
     image **alphabet = load_alphabet();
     demo_names = names;
     demo_alphabet = alphabet;
@@ -345,11 +368,21 @@ void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float th
     int j;
 
     avg = (float *) calloc(l.outputs, sizeof(float));
-    for(j = 0; j < demo_frame; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
+    for(j = 0; j < demo_frame; ++j) predictions[0][j] = (float *) calloc(l.outputs, sizeof(float));
 
-    boxes = (box *)calloc(l.w*l.h*l.n, sizeof(box));
-    probs = (float **)calloc(l.w*l.h*l.n, sizeof(float *));
-    for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = (float *)calloc(l.classes+1, sizeof(float));
+    // added another layer for boxes
+    boxes = (box **)calloc(l.w*l.h*l.n, sizeof(box));
+    for (int i = 0; i < YOLO; i++) {
+      boxes[i] = (box*) calloc(l.w*l.h*l.n, sizeof(box));
+    }
+
+    // added another layer for probs
+    probs = (float ***)calloc(l.w*l.h*l.n, sizeof(float *));
+    for (int i = 0; i < YOLO; i++) {
+      probs[i] = (float**) calloc(l.w*l.h*l.n, sizeof(float *));
+    }
+
+    for(j = 0; j < l.w*l.h*l.n; ++j) probs[0][j] = (float *)calloc(l.classes+1, sizeof(float));
 
     buff[0] = get_image_from_stream(cap);
     buff[1] = copy_image(buff[0]);
