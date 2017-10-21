@@ -731,6 +731,7 @@ matrix make_matrix(int rows, int cols);
 #ifndef __cplusplus
 #ifdef OPENCV
 image get_image_from_stream(CvCapture *cap);
+void save_video(image p, CvVideoWriter *mVideoWriter);
 #endif
 #endif
 void free_image(image m);
