@@ -91,7 +91,7 @@ void *detect_in_thread(void *ptr)
     printf("\033[1;1H");
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
-   
+
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
     return 0;
@@ -171,7 +171,7 @@ void *detect_loop(void *ptr)
 /* Function: draw_detection_thread
  * -------------------------
  * main function for drawing detection
- * 
+ *
  */
 void* draw_detection_in_thread(void *ptr)
 {
@@ -221,11 +221,11 @@ void *counter_func(void *ptr)
 
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
-    
+
     /*
-    Prediction one set up 
+    Prediction one set up
     */
-    image **alphabet = load_alphabet();    
+    image **alphabet = load_alphabet();
     demo_frame = avg_frames;
     demo_alphabet = alphabet;
     demo_classes = classes;
@@ -243,11 +243,11 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         load_weights(&net, weightfile);
     }
     set_batch_network(&net, 1);
-    
 
-    
+
+
     /*
-    Prediction 2 set up 
+    Prediction 2 set up
     */
     if(YOLO == 2){
         char **names2 = get_labels("cfg/obj.names");
@@ -256,7 +256,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         demo_names2 = names2;
         demo_classes2 = 1;
         /* set this network to load on second gpu */
-        cuda_set_device(1);        
+        cuda_set_device(1);
         net2 = parse_network_cfg(cfgfile2);
         /* set the network default gpu to 1 */
         net2.gpu_index = 1;
@@ -266,7 +266,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
 
     srand(2222222);
-    
+
     if(filename){
         printf("video file: %s\n", filename);
         cap = cvCaptureFromFile(filename);
@@ -304,15 +304,16 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             cvResizeWindow("Demo", 1352, 1013);
         }
     }
-    
+
 
 
     layer l = net.layers[net.n-1];
     demo_detections = l.n*l.w*l.h;
     avg = (float *) calloc(l.outputs, sizeof(float));
-    
+
+    // second layer for the second Yolo
     layer l2;
-    if(YOLO==2){
+    if (YOLO==2) {
         l2 = net2.layers[net2.n-1];
         demo_detections2 = l2.n*l2.w*l2.h;
         avg2 = (float *) calloc(l2.outputs, sizeof(float));
@@ -322,27 +323,25 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     for (int i = 0; i < YOLO; i++) {
       predictions[i] = (float**) calloc(demo_frame, sizeof(float*));
     }
-    
+
     int j;
-    for(j = 0; j < demo_frame; ++j){
+    for (j = 0; j < demo_frame; ++j) {
          predictions[0][j] = (float *) calloc(l.outputs, sizeof(float));
          predictions[1][j] = (float *) calloc(l2.outputs, sizeof(float));
     }
+
     // added another layer for boxes
     boxes = (box **)calloc(YOLO, sizeof(box*));
-    for (int i = 0; i < YOLO; i++) {
-      boxes[0] = (box*) calloc(l.w*l.h*l.n, sizeof(box));
-      boxes[1] = (box*) calloc(l2.w*l2.h*l2.n, sizeof(box));
-    }
+    boxes[0] = (box*) calloc(l.w*l.h*l.n, sizeof(box));
+    boxes[1] = (box*) calloc(l2.w*l2.h*l2.n, sizeof(box));
 
     // added another layer for probs
     probs = (float ***)calloc(YOLO, sizeof(float **));
-    for (int i = 0; i < YOLO; i++) {
-      probs[0] = (float**) calloc(l.w*l.h*l.n, sizeof(float *));
-      probs[1] = (float**) calloc(l2.w*l2.h*l2.n, sizeof(float*));
-    }
+    probs[0] = (float**) calloc(l.w*l.h*l.n, sizeof(float *));
+    probs[1] = (float**) calloc(l2.w*l2.h*l2.n, sizeof(float*));
 
-    for(j = 0; j < l.w*l.h*l.n; ++j){
+
+    for (j = 0; j < l.w*l.h*l.n; ++j) {
         probs[0][j] = (float *)calloc(l.classes+1, sizeof(float));
         probs[1][j] = (float *)calloc(l2.classes+1, sizeof(float));
     }
@@ -355,7 +354,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff_letter[2] = letterbox_image(buff[0], net.w, net.h);
     ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
 
-    
+
 
     pthread_t detect_thread;
     pthread_t detect_thread2;
@@ -369,14 +368,14 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-        if(YOLO==2){
-        if(pthread_create(&detect_thread2, 0, detect_in_thread2, 0)) error("Thread creation failed");
+        if(YOLO==2) {
+          if(pthread_create(&detect_thread2, 0, detect_in_thread2, 0)) error("Thread creation failed");
         }
         #ifdef THREADLINE
         if(pthread_create(&counter_thread, 0, counter_func, 0)) error("Counter Thread creation failed"); /* create the counter thread*/
         #endif
         image im = buff[(buff_index + 1)%3];
-        
+
         if(!prefix){
             fps = 1./(get_wall_time() - demo_time);
             demo_time = get_wall_time();
@@ -387,7 +386,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             //draw_detection_in_thread(0);
             /* uncommet to see display */
             //display_in_thread(0);
-        }else{
+        }
+        else {
             char name[256];
             sprintf(name, "%s_%08d", prefix, count);
             #ifdef SAVEVIDEO
@@ -395,16 +395,16 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             #else
             save_image(im, name);
             #endif
-
         }
         pthread_join(fetch_thread, 0);
         pthread_join(detect_thread, 0);
-        if(YOLO==2){
-        pthread_join(detect_thread2, 0);
+
+        if (YOLO==2) {
+          pthread_join(detect_thread2, 0);
         }
         #ifdef THREADLINE
         pthread_join(counter_thread, 0); /* joins the counter_thread back to main process */
-        #endif 
+        #endif
         ++count;
 
     }
