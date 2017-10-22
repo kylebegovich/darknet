@@ -384,7 +384,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             save_video(im, mVideoWriter); /* save the current frame */
             #endif
 
-            draw_detection_in_thread(0);
+            //draw_detection_in_thread(0);
             /* uncommet to see display */
             //display_in_thread(0);
         }else{
