@@ -17,7 +17,7 @@ while true; do
 			exit 1
 			;;
 		1)
-			./darknet detector demo cfg/coco.data cfg/yolo-helmet-detect.cfg yolo-helmet_10000.weights helmet_cyclists.MP4
+			./darknet detector demo cfg/coco.data cfg/yolo.cfg yolo.weights helmet_cyclists.MP4
 			;;
 		2)
 			./darknet detect cfg/yolo-helmet-detect.cfg yolo-helmet_10000.weights data/helmet_and_non.jpg
