@@ -71,35 +71,14 @@ void *detect_in_thread(void *ptr)
 {
     running = 1;
     float nms = .4;
-    float demo_thresh2 = 0;
 
     layer l = net.layers[net.n-1];
-    layer l2 = net2.layers[net2.n-1];
-
     float *X = buff_letter[(buff_index+2)%3].data;
-    
     float *prediction = network_predict(net, X);
-    float *prediction2 = network_predict(net2, X);
 
     memcpy(predictions[0][demo_index], prediction, l.outputs*sizeof(float));
-    memcpy(predictions[1][demo_index2], prediction2, l2.outputs*sizeof(float));
-    
     mean_arrays(predictions[0], demo_frame, l.outputs, avg);
-    mean_arrays(predictions[1], demo_frame, l2.outputs, avg2);
-    
     l.output = avg;
-    l2.output = avg2;
-
-    if(l2.type == DETECTION){
-        get_detection_boxes(l2 , 1, 1, demo_thresh2, probs[1], boxes[1], 0);
-    } else if (l2.type == REGION){
-        get_region_boxes(l2, buff[0].w, buff[0].h, net2.w, net2.h, demo_thresh2, probs[1], boxes[1], 0, 0, 0, demo_hier, 1);
-    } else {
-        error("Last layer must produce detections\n");
-    }
-
-    if (nms > 0) do_nms_obj(boxes[1], probs[1], l2.w*l2.h*l2.n, l2.classes, nms);
-
     if(l.type == DETECTION){
         get_detection_boxes(l, 1, 1, demo_thresh, probs[0], boxes[0], 0);
     } else if (l.type == REGION){
@@ -109,35 +88,36 @@ void *detect_in_thread(void *ptr)
     }
     if (nms > 0) do_nms_obj(boxes[0], probs[0], l.w*l.h*l.n, l.classes, nms);
 
-    
     printf("\033[2J");
     printf("\033[1;1H");
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
 
 
-    // layer l2 = net2.layers[net2.n-1];
-    // float *X2 = buff_letter[(buff_index+2)%3].data;
-    // float *prediction2 = network_predict(net2, X2);
-    // printf("Thread2: \n\n");
+    layer l2 = net2.layers[net2.n-1];
+    float *X2 = buff_letter[(buff_index+2)%3].data;
+    float *prediction2 = network_predict(net2, X2);
+    printf("Thread2: \n\n");
     
-    // memcpy(predictions[1][demo_index2], prediction2, l2.outputs*sizeof(float));
-    // mean_arrays(predictions[1], demo_frame, l2.outputs, avg2);
-    // l2.output = avg2;
-    // if(l2.type == DETECTION){
-    //      get_detection_boxes(l2, 1, 1, demo_thresh, probs[1], boxes[1], 0);
-    // } else if (l2.type == REGION){
-    //      get_region_boxes(l2, buff[0].w, buff[0].h, net2.w, net2.h, demo_thresh, probs[1], boxes[1], 0, 0, 0, demo_hier, 1);
-    // } else {
-    //      error("Last layer must produce detections\n");
-    // }
-    // if (nms > 0) do_nms_obj(boxes[1], probs[1], l2.w*l2.h*l2.n, l2.classes, nms);
+    memcpy(predictions[1][demo_index2], prediction2, l2.outputs*sizeof(float));
+    mean_arrays(predictions[1], demo_frame, l2.outputs, avg2);
+    l2.output = avg2;
+    if(l2.type == DETECTION){
+         get_detection_boxes(l2, 1, 1, demo_thresh, probs[1], boxes[1], 0);
+    } else if (l2.type == REGION){
+         get_region_boxes(l2, buff[0].w, buff[0].h, net2.w, net2.h, demo_thresh, probs[1], boxes[1], 0, 0, 0, demo_hier, 1);
+    } else {
+         error("Last layer must produce detections\n");
+    }
+    if (nms > 0) do_nms_obj(boxes[1], probs[1], l2.w*l2.h*l2.n, l2.classes, nms);
 
     image display = buff[(buff_index+2) % 3];
     /* duplicate function of draw_detections that writes the info of detected obj to result */
 
-    draw_detections2(display, demo_detections, demo_detections2, demo_thresh, boxes[0],boxes[1], probs[0],probs[1], 0, demo_names, demo_names2, demo_alphabet, demo_classes,demo_classes2);
+    draw_detections_info(display, demo_detections, demo_thresh, boxes[0], probs[0], 0, demo_names, demo_alphabet, demo_classes, result);
+    //draw_detections_info(display, demo_detections2, demo_thresh, boxes[1], probs[1], 0, demo_names2, demo_alphabet, demo_classes2, result);
 
+    
     demo_index = (demo_index + 1)%demo_frame;
     demo_index2 = (demo_index2 + 1)%demo_frame;
     
@@ -147,33 +127,33 @@ void *detect_in_thread(void *ptr)
 }
 
 
-// void *detect_in_thread2(void *ptr)
-// {
-//     running = 1;
-//     float nms = .4;
-//     layer l2 = net2.layers[net2.n-1];
-//     float *X = buff_letter[(buff_index+2)%3].data;
-//     float *prediction = network_predict(net2, X);
-//     printf("Thread2: \n\n");
+void *detect_in_thread2(void *ptr)
+{
+    running = 1;
+    float nms = .4;
+    layer l2 = net2.layers[net2.n-1];
+    float *X = buff_letter[(buff_index+2)%3].data;
+    float *prediction = network_predict(net2, X);
+    printf("Thread2: \n\n");
     
-//     // memcpy(predictions[1][demo_index2], prediction, l2.outputs*sizeof(float));
-//     // mean_arrays(predictions[1], demo_frame, l2.outputs, avg2);
-//     // l2.output = avg2;
+    memcpy(predictions[1][demo_index2], prediction, l2.outputs*sizeof(float));
+    mean_arrays(predictions[1], demo_frame, l2.outputs, avg2);
+    l2.output = avg2;
    
-//     // if(l2.type == DETECTION){
-//     //      get_detection_boxes(l2, 1, 1, demo_thresh, probs[1], boxes[1], 0);
-//     // } else if (l2.type == REGION){
-//     //      get_region_boxes(l2, buff[0].w, buff[0].h, net2.w, net2.h, demo_thresh, probs[1], boxes[1], 0, 0, 0, demo_hier, 1);
-//     // } else {
-//     //      error("Last layer must produce detections\n");
-//     // }
-//     // if (nms > 0) do_nms_obj(boxes[1], probs[1], l2.w*l2.h*l2.n, l2.classes, nms);
+    if(l2.type == DETECTION){
+         get_detection_boxes(l2, 1, 1, demo_thresh, probs[1], boxes[1], 0);
+    } else if (l2.type == REGION){
+         get_region_boxes(l2, buff[0].w, buff[0].h, net2.w, net2.h, demo_thresh, probs[1], boxes[1], 0, 0, 0, demo_hier, 1);
+    } else {
+         error("Last layer must produce detections\n");
+    }
+    if (nms > 0) do_nms_obj(boxes[1], probs[1], l2.w*l2.h*l2.n, l2.classes, nms);
 
-//     demo_index2 = (demo_index2 + 1)%demo_frame;
-//     running = 0;
+    demo_index2 = (demo_index2 + 1)%demo_frame;
+    running = 0;
 
-//     return 0;
-// }
+    return 0;
+}
 void *fetch_in_thread(void *ptr)
 {
     int status = fill_image_from_stream(cap, buff[buff_index]);
@@ -224,13 +204,13 @@ void *detect_loop(void *ptr)
  * main function for drawing detection
  *
  */
-// void* draw_detection_in_thread(void *ptr)
-// {
-//     image display = buff[(buff_index+2) % 3];
-//      duplicate function of draw_detections that writes the info of detected obj to result 
-//     draw_detections_info(display, demo_detections, demo_thresh, boxes[0], probs[0], 0, demo_names, demo_alphabet, demo_classes, result);
+void* draw_detection_in_thread(void *ptr)
+{
+    image display = buff[(buff_index+2) % 3];
+    /* duplicate function of draw_detections that writes the info of detected obj to result */
+    draw_detections_info(display, demo_detections, demo_thresh, boxes[0], probs[0], 0, demo_names, demo_alphabet, demo_classes, result);
     
-// }
+}
 
 /*
  * Function:  counter_func
@@ -358,15 +338,18 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     }
 
 
+
     layer l = net.layers[net.n-1];
     demo_detections = l.n*l.w*l.h;
     avg = (float *) calloc(l.outputs, sizeof(float));
 
     // second layer for the second Yolo
-    layer l2 = net2.layers[net2.n-1];
-    demo_detections2 = l2.n*l2.w*l2.h;
-    avg2 = (float *) calloc(l2.outputs, sizeof(float));
-
+    layer l2;
+    if (YOLO==2) {
+        l2 = net2.layers[net2.n-1];
+        demo_detections2 = l2.n*l2.w*l2.h;
+        avg2 = (float *) calloc(l2.outputs, sizeof(float));
+    }
     // added another layer for predictions
     predictions = (float***) calloc(YOLO, sizeof(float**));
     for (int i = 0; i < YOLO; i++) {
@@ -389,11 +372,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     probs[0] = (float**) calloc(l.w*l.h*l.n, sizeof(float *));
     probs[1] = (float**) calloc(l2.w*l2.h*l2.n, sizeof(float*));
 
+
     for (j = 0; j < l.w*l.h*l.n; ++j) {
         probs[0][j] = (float *)calloc(l.classes+1, sizeof(float));
-        
-    }
-    for(j = 0; j <l2.w*l2.h*l2.n; ++j){
         probs[1][j] = (float *)calloc(l2.classes+1, sizeof(float));
     }
 
@@ -434,9 +415,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             save_video(im, mVideoWriter); /* save the current frame */
             #endif
 
-            
+            //draw_detection_in_thread(0);
             /* uncommet to see display */
-            //display_in_thread(0);
+            display_in_thread(0);
         }
         else {
             char name[256];

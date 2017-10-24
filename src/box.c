@@ -248,6 +248,7 @@ int nms_comparator(const void *pa, const void *pb)
 
 void do_nms_obj(box *boxes, float **probs, int total, int classes, float thresh)
 {
+
     int i, j, k;
     sortable_bbox *s = calloc(total, sizeof(sortable_bbox));
 
@@ -258,7 +259,9 @@ void do_nms_obj(box *boxes, float **probs, int total, int classes, float thresh)
     }
 
     qsort(s, total, sizeof(sortable_bbox), nms_comparator);
+    
     for(i = 0; i < total; ++i){
+        
         if(probs[s[i].index][classes] == 0) continue;
         box a = boxes[s[i].index];
         for(j = i+1; j < total; ++j){

@@ -364,13 +364,16 @@ void correct_region_boxes(box *boxes, int n, int w, int h, int netw, int neth, i
 void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, float **probs, box *boxes, float **masks, int only_objectness, int *map, float tree_thresh, int relative)
 {
     int i,j,n,z;
-    float *predictions = l.output;
+    float *predictions = l.output;    
     if (l.batch == 2) {
+        
         float *flip = l.output + l.outputs;
+        
         for (j = 0; j < l.h; ++j) {
             for (i = 0; i < l.w/2; ++i) {
                 for (n = 0; n < l.n; ++n) {
                     for(z = 0; z < l.classes + l.coords + 1; ++z){
+                        
                         int i1 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + i;
                         int i2 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + (l.w - i - 1);
                         float swap = flip[i1];
@@ -388,6 +391,7 @@ void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, f
             l.output[i] = (l.output[i] + flip[i])/2.;
         }
     }
+    
     for (i = 0; i < l.w*l.h; ++i){
         int row = i / l.w;
         int col = i % l.w;
@@ -427,6 +431,7 @@ void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, f
                 for(j = 0; j < l.classes; ++j){
                     int class_index = entry_index(l, 0, n*l.w*l.h + i, l.coords + 1 + j);
                     float prob = scale*predictions[class_index];
+                    // printf("prob: %f, thresh: %f\n", prob, thresh);
                     probs[index][j] = (prob > thresh) ? prob : 0;
                     if(prob > max) max = prob;
                     // TODO REMOVE
@@ -447,7 +452,9 @@ void get_region_boxes(layer l, int w, int h, int netw, int neth, float thresh, f
             }
         }
     }
+    
     correct_region_boxes(boxes, l.w*l.h*l.n, w, h, netw, neth, relative);
+    
 }
 
 #ifdef GPU

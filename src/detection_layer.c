@@ -226,6 +226,7 @@ void get_detection_boxes(layer l, int w, int h, float thresh, float **probs, box
 {
     int i,j,n;
     float *predictions = l.output;
+    // printf("l.output[0]\n, %f",l.output[0]);
     //int per_cell = 5*num+classes;
     for (i = 0; i < l.side*l.side; ++i){
         int row = i / l.side;
