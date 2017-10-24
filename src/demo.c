@@ -308,7 +308,12 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         demo_names2 = names2;
         demo_classes2 = 1;
         /* set this network to load on second gpu */
+
         cuda_set_device(0);
+
+        #ifdef GPU
+        cuda_set_device(1);
+        #endif 
         net2 = parse_network_cfg(cfgfile2);
         /* set the network default gpu to 1 */
         net2.gpu_index = 0;
