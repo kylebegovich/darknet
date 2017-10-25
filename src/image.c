@@ -207,11 +207,11 @@ void draw_box_width(image a, int x1, int y1, int x2, int y2, int w, float r, flo
 }
 
 /*
- * Function:  draw_vertical_line 
+ * Function:  draw_vertical_line
  * --------------------
  * draws a vertical line on the given x with color (r,g,b)
  *
- *  a: image to be drawn on 
+ *  a: image to be drawn on
  *  x: position to be drawn
  *  w: width of the line
  *  r,g,b: color value of line
@@ -304,19 +304,19 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             }
         }
     }
-   
+
 }
-void draw_detections2(image im, int num, int num2, float thresh, box *boxes, box* boxes2, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2){
+void draw_detections2(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2){
     int i;
 
     for(i = 0; i < num2; ++i){
         int class = max_index(probs2[i], classes2);
         float prob = probs2[i][class];
-        if(prob > thresh){
-            printf("huehue\n");
+        if(prob > thresh2){
+
             int width = im.h * .006;
 
-            printf("%s: %.0f%%\n", names[class], prob*100);
+            printf("%s: %.0f%%\n", names2[class], prob*100);
             int offset = class*123457 % classes2;
             float red = get_color(2,offset,classes2);
             float green = get_color(1,offset,classes2);
@@ -347,7 +347,7 @@ void draw_detections2(image im, int num, int num2, float thresh, box *boxes, box
             }
         }
     }
-
+    //
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
         float prob = probs[i][class];
@@ -396,7 +396,7 @@ void draw_detections2(image im, int num, int num2, float thresh, box *boxes, box
     }
 }
 /*
- * Function:  draw_detections_info 
+ * Function:  draw_detections_info
  * --------------------
  *  draws the detected box and writes the meta data to result
  *
@@ -415,7 +415,7 @@ void draw_detections2(image im, int num, int num2, float thresh, box *boxes, box
 void draw_detections_info(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes, info* result)
 {
     int i;
-    
+
     int l = 1;
     result[0].n = 0;
 
@@ -424,7 +424,7 @@ void draw_detections_info(image im, int num, float thresh, box *boxes, float **p
         float prob = probs[i][class];
         if(prob > thresh){
             int width = im.h * .006;
-            
+
             printf("%s: %.0f%%\n", names[class], prob*100);
             int offset = class*123457 % classes;
             float red = get_color(2,offset,classes);
@@ -478,7 +478,7 @@ void draw_detections_info(image im, int num, float thresh, box *boxes, float **p
     //         printf("name:%s top:%i bot:%i left:%i right:%i probability:%f \n",objects[i].name,objects[i].top,objects[i].bot,objects[i].left,objects[i].right,objects[i].prob);
     // }
     result[0].n = l-1;
-    
+
 
 }
 
@@ -884,7 +884,7 @@ void save_video(image p, CvVideoWriter *mVideoWriter)
     cvReleaseImage(&disp);
     free_image(copy);
 }
-#endif 
+#endif
 
 void save_image(image im, const char *name)
 {

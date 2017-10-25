@@ -419,4 +419,3 @@ float *network_predict_gpu(network net, float *input)
     forward_network_gpu(net);
     return net.output;
 }
-
