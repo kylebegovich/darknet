@@ -209,7 +209,7 @@ void draw_box_width(image a, int x1, int y1, int x2, int y2, int w, float r, flo
 /*
  * Function:  draw_vertical_line
  * --------------------
- * draws a vertical line on the given x with color (r,g,b)
+ *  draws a vertical line on the given x with color (r,g,b)
  *
  *  a: image to be drawn on
  *  x: position to be drawn
@@ -306,6 +306,24 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
     }
 
 }
+
+/*
+ * Function: draw_detections2
+ * Authors: Daniel Huang(yhung119)
+ * -------------------------
+ *  draw the detections of two predictions
+ *  TODO: take an array of num, thresh, boxes, probs, names, and classes
+ *
+ *  im: input image
+ *  num, num2 : size of layer 1 and layer2
+ *  thresh, thresh2: threshold of network 1 and 2
+ *  boxes, boxes1 : predicted boxes from network 1 and 2
+ *  probs, probs2 : predicted values from network 1 and 2 
+ *  masks : ... (not being used)
+ *  names, names2 : the names of predicted values for network 1 and 2 
+ *  alphebet : array that maps word to alphebet to be drawn
+ *  classes, classes2 : the number of predictable classes for network 1 and 2 
+ */
 void draw_detections2(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2){
     int i;
 
@@ -315,7 +333,9 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
         if(prob > thresh2){
 
             int width = im.h * .006;
-
+            /*
+            *   Randomly permute a color base on number of classes
+            */
             printf("%s: %.0f%%\n", names2[class], prob*100);
             int offset = class*123457 % classes2;
             float red = get_color(2,offset,classes2);
@@ -323,22 +343,26 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             float blue = get_color(0,offset,classes2);
             float rgb[3];
 
+            /* set the color */
             rgb[0] = red;
             rgb[1] = green;
             rgb[2] = blue;
             box b = boxes2[i];
             // b.x and b.y indicates the center of the box
             // below is calcuating the position of left,right,top,bot respective to the im.h
+            /* set the coordinates of the boxes to be drawn */
             int left  = (b.x-b.w/2.)*im.w;
             int right = (b.x+b.w/2.)*im.w;
             int top   = (b.y-b.h/2.)*im.h;
             int bot   = (b.y+b.h/2.)*im.h;
 
+            /* prevent boxes to be out of bound */
             if(left < 0) left = 0;
             if(right > im.w-1) right = im.w-1;
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
+            /* actual drawing of the box */
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
                 image label = get_label(alphabet, names2[class], (im.h*.03)/10);
@@ -347,7 +371,7 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             }
         }
     }
-    //
+    
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
         float prob = probs[i][class];
@@ -355,46 +379,44 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             int width = im.h * .006;
 
             printf("%s: %.0f%%\n", names[class], prob*100);
+            /*
+            *   Randomly permute a color base on number of classes
+            */
             int offset = class*123457 % classes;
             float red = get_color(2,offset,classes);
             float green = get_color(1,offset,classes);
             float blue = get_color(0,offset,classes);
             float rgb[3];
-
+            /* set the color */
             rgb[0] = red;
             rgb[1] = green;
             rgb[2] = blue;
             box b = boxes[i];
             // b.x and b.y indicates the center of the box
             // below is calcuating the position of left,right,top,bot respective to the im.h
+            /* set the coordinates of the boxes to be drawn */
             int left  = (b.x-b.w/2.)*im.w;
             int right = (b.x+b.w/2.)*im.w;
             int top   = (b.y-b.h/2.)*im.h;
             int bot   = (b.y+b.h/2.)*im.h;
 
+            /* prevent boxes to be out of bound */
             if(left < 0) left = 0;
             if(right > im.w-1) right = im.w-1;
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
+            /* actual drawing of the box */
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
                 image label = get_label(alphabet, names[class], (im.h*.03)/10);
                 draw_label(im, top + width, left, label, rgb);
                 free_image(label);
             }
-            if (masks){
-                image mask = float_to_image(14, 14, 1, masks[i]);
-                image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
-                image tmask = threshold_image(resized_mask, .5);
-                embed_image(tmask, im, left, top);
-                free_image(mask);
-                free_image(resized_mask);
-                free_image(tmask);
-            }
         }
     }
 }
+
 /*
  * Function:  draw_detections_info
  * --------------------
@@ -473,13 +495,12 @@ void draw_detections_info(image im, int num, float thresh, box *boxes, float **p
             }
         }
     }
+    
     // printf("num of objects: %d \n", l);
     // for(int i=0;i<l;i++){
     //         printf("name:%s top:%i bot:%i left:%i right:%i probability:%f \n",objects[i].name,objects[i].top,objects[i].bot,objects[i].left,objects[i].right,objects[i].prob);
     // }
     result[0].n = l-1;
-
-
 }
 
 void transpose_image(image im)
