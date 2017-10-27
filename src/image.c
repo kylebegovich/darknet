@@ -21,7 +21,7 @@ int right;
 float max(float a,float b){
     if (a>b){
         return a;
-    }   
+    }
     else{
         return b;
     }
@@ -37,14 +37,14 @@ float min(float a,float b){
 }
 
 
-int nearest_bycicle(mystruct person,mystruct* bycicle,int l){
+int nearest_bicycle(mystruct person,mystruct* bicycle,int l){
     int i=0;
     int index=0;
     int len1=-10;
     for (;i<l;i++){
-        int left=max(person.left,bycicle[i].left);
-        int right=min(person.right,bycicle[i].right);
-        printf("left:%i right:%i\n",left,right);
+        int left=max(person.left,bicycle[i].left);
+        int right=min(person.right,bicycle[i].right);
+        // - printf("left:%i right:%i\n",left,right);
         if (left>right)
             continue;
         int len2=right-left;
@@ -53,7 +53,7 @@ int nearest_bycicle(mystruct person,mystruct* bycicle,int l){
             len1=len2;
             index=i; /* hmm should this go outside or nah? */
         }
-    }       
+    }
     if (len1==-10)
         return -1;
 
@@ -92,10 +92,12 @@ int helper(mystruct helmet,mystruct person,mystruct* people,int l,int index){
         return -1;
 
     if (people[i].left==person.left&&people[i].right==person.right){
-        printf("%s\n","not -1");return index;
+        // - printf("%s\n","not -1");
+        return index;
     }
     else{
-        printf("%s\n","-1");return -1;
+        // - printf("%s\n","-1");
+        return -1;
     }
 }
 
@@ -346,7 +348,7 @@ image **load_alphabet()
 void draw_detections(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes)
 {
     int i;
-    
+
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
         float prob = probs[i][class];
@@ -382,7 +384,7 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
                 draw_label(im, top + width, left, label, rgb);
                 free_image(label);
             }
-            
+
 
 
         }
@@ -401,17 +403,17 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
  *  num, num2 : size of layer 1 and layer2
  *  thresh, thresh2: threshold of network 1 and 2
  *  boxes, boxes1 : predicted boxes from network 1 and 2
- *  probs, probs2 : predicted values from network 1 and 2 
+ *  probs, probs2 : predicted values from network 1 and 2
  *  masks : ... (not being used)
- *  names, names2 : the names of predicted values for network 1 and 2 
+ *  names, names2 : the names of predicted values for network 1 and 2
  *  alphebet : array that maps word to alphebet to be drawn
- *  classes, classes2 : the number of predictable classes for network 1 and 2 
+ *  classes, classes2 : the number of predictable classes for network 1 and 2
  */
 void draw_detections2(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2){
-    
+
     int i;
     mystruct* person=malloc(sizeof(mystruct)*1000);
-    mystruct* bycicle=malloc(sizeof(mystruct)*1000);
+    mystruct* bicycle=malloc(sizeof(mystruct)*1000);
     mystruct* helmet=malloc(sizeof(mystruct)*1000);
     int l1=0;
     int l2=0;
@@ -431,7 +433,7 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             /*
             *   Randomly permute a color base on number of classes
             */
-            printf("%s: %.0f%%\n", names2[class], prob*100);
+            // - printf("%s: %.0f%%\n", names2[class], prob*100);
             int offset = class*123457 % classes2;
             float red = get_color(2,offset,classes2);
             float green = get_color(1,offset,classes2);
@@ -471,17 +473,23 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
                 person[l1].bot=bot;
                 person[l1].top=top;
                 l1++;
+
+                // added a print statement for the detected person
+                printf("name: person top:%i bot:%i left:%i right:%i probability:%f \n", top, bot, left, right, prob*100);
             }
             else{
-                bycicle[l2].left=left;
-                bycicle[l2].right=right;
-                bycicle[l2].bot=bot;
-                bycicle[l2].top=top;
+                bicycle[l2].left=left;
+                bicycle[l2].right=right;
+                bicycle[l2].bot=bot;
+                bicycle[l2].top=top;
                 l2++;
+
+                // added a print statement for the detected bicycle
+                printf("name: bicycle top:%i bot:%i left:%i right:%i probability:%f \n", top, bot, left, right, prob*100);
             }
         }
     }
-    
+
     // for helmet
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
@@ -489,7 +497,7 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
         if(prob > thresh){
             int width = im.h * .006;
 
-            printf("%s: %.0f%%\n", names[class], prob*100);
+            // - printf("%s: %.0f%%\n", names[class], prob*100);
             /*
             *   Randomly permute a color base on number of classes
             */
@@ -530,11 +538,14 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             helmet[l3].bot=bot;
             helmet[l3].top=top;
             l3++;
+
+            // added a print statement for the detected helmet
+            printf("name: helmet top:%i bot:%i left:%i right:%i probability:%f \n", top, bot, left, right, prob*100);
         }
     }
     int i1=0;
     for(; i1 < l1; i1++){
-        int j=nearest_bycicle(person[i1],bycicle,l2);
+        int j=nearest_bicycle(person[i1],bicycle,l2);
         if (j==-1)
             continue;
         int k1=nearest_helmet(person[i1],helmet,l3);
@@ -551,20 +562,20 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
         rgb[1]=green;
         rgb[2]=blue;
 
-        int top1=person[i1].top; 
-        int bot1=person[i1].bot; 
-        int left1=person[i1].left; 
+        int top1=person[i1].top;
+        int bot1=person[i1].bot;
+        int left1=person[i1].left;
         int right1=person[i1].right;
 
-        int top2=bycicle[j].top; 
-        int bot2=bycicle[j].bot; 
-        int left2=bycicle[j].left; 
-        int right2=bycicle[j].right;
+        int top2=bicycle[j].top;
+        int bot2=bicycle[j].bot;
+        int left2=bicycle[j].left;
+        int right2=bicycle[j].right;
         int top3=0;int bot3=0;int left3=0;int right3=0;
         if (k!=-1){
-            top3=helmet[k].top;  
-            bot3=helmet[k].bot;  
-            left3=helmet[k].left;  
+            top3=helmet[k].top;
+            bot3=helmet[k].bot;
+            left3=helmet[k].left;
             right3=helmet[k].right;
         }
         int ii=0;
@@ -578,8 +589,8 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
                     rgb[2]=(int)(blue*+5);
 
                     draw_box_width(im, min(left1,left2), min(top1,top2), max(right1,right2), max(bot1,bot2), width, (int)(red+5), (int)(green+5), (int)(blue+5));
-                    label = get_label(alphabet, "bicyclist with helmet", (im.h*.03)/10);
-                    //printf("%s\n","helmet");    
+                    label = get_label(alphabet, "bicyclist wearing helmet", (im.h*.03)/10);
+                    //printf("%s\n","helmet");
                 }
                 else{
                     draw_box_width(im, min(left1,left2), min(top1,top2), max(right1,right2), max(bot1,bot2), width, red, green, blue);
@@ -671,7 +682,7 @@ void draw_detections_info(image im, int num, float thresh, box *boxes, float **p
             }
         }
     }
-    
+
     // printf("num of objects: %d \n", l);
     // for(int i=0;i<l;i++){
     //         printf("name:%s top:%i bot:%i left:%i right:%i probability:%f \n",objects[i].name,objects[i].top,objects[i].bot,objects[i].left,objects[i].right,objects[i].prob);

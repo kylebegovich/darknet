@@ -81,7 +81,7 @@ void *detect_in_thread(void *ptr)
 
     /*
     *   get the image and forward the first network with given input
-    */ 
+    */
     layer l = net.layers[net.n-1];
     float *X = buff_letter[(buff_index+2)%3].data;
     float *prediction = network_predict(net, X);
@@ -91,7 +91,7 @@ void *detect_in_thread(void *ptr)
 
     /*
     *   get the image and forward the second network with given input
-    */ 
+    */
     layer l2 = net2.layers[net2.n-1];
     float *X2 = buff_letter2[(buff_index+2)%3].data;
     float *prediction2 = network_predict(net2, X2);
@@ -124,10 +124,10 @@ void *detect_in_thread(void *ptr)
     if (nms > 0) do_nms_obj(boxes[1], probs[1], l2.w*l2.h*l2.n, l2.classes, nms);
 
 
-    printf("\033[2J");
-    printf("\033[1;1H");
-    printf("\nFPS:%.1f\n",fps);
-    printf("Objects:\n\n");
+    // printf("\033[2J");
+    // printf("\033[1;1H");
+    printf("\n\n\nFPS:%.1f\n",fps);
+    printf("Objects:\n");
 
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
@@ -256,15 +256,15 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     demo_hier = hier;
     counter = 0; /*initilizating counter*/
     result = calloc(1000, sizeof(info)); /* initilizating info pointer assuming we will never detect more than 10000 items*/
-    
-    /* 
-    *   set up and load the imported network 
+
+    /*
+    *   set up and load the imported network
     */
     cuda_set_device(0);
     net = parse_network_cfg(cfgfile);
-    
-    /* 
-    *   set the network default gpu to 0 
+
+    /*
+    *   set the network default gpu to 0
     */
     net.gpu_index = 0;
     if(weightfile){
@@ -284,8 +284,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     char *cfgfile2 = "cfg/yolo.cfg";
     char *weightfile2 = "yolo.weights";
 
-    /* 
-        set up and load the second network and gpu to 0 
+    /*
+        set up and load the second network and gpu to 0
     */
     cuda_set_device(0);
     net2 = parse_network_cfg(cfgfile2);
@@ -296,7 +296,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     srand(2222222);
 
     /*
-    *   Loading frame from frame or webcam 
+    *   Loading frame from frame or webcam
     */
     if(filename){
         printf("video file: %s\n", filename);
@@ -353,7 +353,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
     /*
     *   Set up the prediction array for both detections
-    */  
+    */
     predictions = (float***) calloc(YOLO, sizeof(float**));
     for (int i = 0; i < YOLO; i++) {
       predictions[i] = (float**) calloc(demo_frame, sizeof(float*));
@@ -366,7 +366,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
     /*
     *   Set up the boxes and probs for both predictions
-    */  
+    */
 
     // added another layer for boxes
     boxes = (box **)calloc(YOLO, sizeof(box*));
