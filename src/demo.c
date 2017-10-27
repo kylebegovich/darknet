@@ -272,7 +272,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     set_batch_network(&net, 1);
 
 
-
     /*
     *   Loading the files for second prediction
     */

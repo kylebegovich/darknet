@@ -10,6 +10,95 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+typedef struct my_struct{
+
+int top;
+int bot;
+int left;
+int right;
+} mystruct;
+
+float max(float a,float b){
+    if (a>b){
+        return a;
+    }   
+    else{
+        return b;
+    }
+}
+
+float min(float a,float b){
+    if (a>b){
+        return b;
+    }
+    else{
+        return a;
+    }
+}
+
+
+int nearest_bycicle(mystruct person,mystruct* bycicle,int l){
+    int i=0;
+    int index=0;
+    int len1=-10;
+    for (;i<l;i++){
+        int left=max(person.left,bycicle[i].left);
+        int right=min(person.right,bycicle[i].right);
+        printf("left:%i right:%i\n",left,right);
+        if (left>right)
+            continue;
+        int len2=right-left;
+        //printf("len2:%i\n",len2);
+        if (len2>len1){
+            len1=len2;
+            index=i;
+        }
+    }       
+    if (len1==-10)
+        return -1;
+
+    return index;
+}
+
+int nearest_helmet(mystruct person,mystruct* helmet,int l){
+    int i=0;
+    int index=0;
+    int len1=-10;
+
+    for (; i < l; i++){
+        int left=max(person.left,helmet[i].left);
+        int right=min(person.right,helmet[i].right);
+        int len2=right-left;
+        if (left>right)
+            continue;
+        if (len2>len1){
+            len1=len2;
+            index=i;
+        }
+    }
+
+    if (len1==-10)
+        return -1;
+
+    return index;
+
+}
+
+
+int helper(mystruct helmet,mystruct person,mystruct* people,int l,int index){
+
+    int i=nearest_helmet(helmet,people, l);
+    if (index==-1||i==-1)
+        return -1;
+
+    if (people[i].left==person.left&&people[i].right==person.right){
+        printf("%s\n","not -1");return index;
+    }
+    else{
+        printf("%s\n","-1");return -1;
+    }
+}
+
 int windows = 0;
 
 float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
@@ -257,7 +346,7 @@ image **load_alphabet()
 void draw_detections(image im, int num, float thresh, box *boxes, float **probs, float **masks, char **names, image **alphabet, int classes)
 {
     int i;
-
+    
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
         float prob = probs[i][class];
@@ -293,15 +382,9 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
                 draw_label(im, top + width, left, label, rgb);
                 free_image(label);
             }
-            if (masks){
-                image mask = float_to_image(14, 14, 1, masks[i]);
-                image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
-                image tmask = threshold_image(resized_mask, .5);
-                embed_image(tmask, im, left, top);
-                free_image(mask);
-                free_image(resized_mask);
-                free_image(tmask);
-            }
+            
+
+
         }
     }
 
@@ -325,12 +408,24 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
  *  classes, classes2 : the number of predictable classes for network 1 and 2 
  */
 void draw_detections2(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2){
+    
     int i;
+    mystruct* person=malloc(sizeof(mystruct)*1000);
+    mystruct* bycicle=malloc(sizeof(mystruct)*1000);
+    mystruct* helmet=malloc(sizeof(mystruct)*1000);
+    int l1=0;
+    int l2=0;
+    int l3=0;
 
+    // for yolo
     for(i = 0; i < num2; ++i){
         int class = max_index(probs2[i], classes2);
         float prob = probs2[i][class];
         if(prob > thresh2){
+
+            if (class!=0&&class!=1){
+                continue;
+            }
 
             int width = im.h * .006;
             /*
@@ -363,15 +458,31 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             if(bot > im.h-1) bot = im.h-1;
 
             /* actual drawing of the box */
-            draw_box_width(im, left, top, right, bot, width, red, green, blue);
-            if (alphabet) {
-                image label = get_label(alphabet, names2[class], (im.h*.03)/10);
-                draw_label(im, top + width, left, label, rgb);
-                free_image(label);
+            // draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            // if (alphabet) {
+            //     image label = get_label(alphabet, names2[class], (im.h*.03)/10);
+            //     draw_label(im, top + width, left, label, rgb);
+            //     free_image(label);
+            // }
+
+            if (class==0){
+                person[l1].left=left;
+                person[l1].right=right;
+                person[l1].bot=bot;
+                person[l1].top=top;
+                l1++;
+            }
+            else{
+                bycicle[l2].left=left;
+                bycicle[l2].right=right;
+                bycicle[l2].bot=bot;
+                bycicle[l2].top=top;
+                l2++;
             }
         }
     }
     
+    // for helmet
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
         float prob = probs[i][class];
@@ -406,11 +517,76 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            /* actual drawing of the box */
-            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            // /* actual drawing of the box */
+            // draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            // if (alphabet) {
+            //     image label = get_label(alphabet, names[class], (im.h*.03)/10);
+            //     draw_label(im, top + width, left, label, rgb);
+            //     free_image(label);
+            // }
+
+            helmet[l3].left=left;
+            helmet[l3].right=right;
+            helmet[l3].bot=bot;
+            helmet[l3].top=top;
+            l3++;
+        }
+    }
+    int i1=0;
+    for(; i1 < l1; i1++){
+        int j=nearest_bycicle(person[i1],bycicle,l2);
+        if (j==-1)
+            continue;
+        int k1=nearest_helmet(person[i1],helmet,l3);
+        int k=-1;
+        if (k1!=-1)
+             k=helper(helmet[k1],person[i1],person,l1,k1);
+        int width = im.h * .006;
+        int offset = 1*123457 % classes;
+        float red = get_color(2,offset,classes);
+        float green = get_color(1,offset,classes);
+        float blue = get_color(0,offset,classes);
+        float rgb[3];
+        rgb[0]=red;
+        rgb[1]=green;
+        rgb[2]=blue;
+
+        int top1=person[i1].top; 
+        int bot1=person[i1].bot; 
+        int left1=person[i1].left; 
+        int right1=person[i1].right;
+
+        int top2=bycicle[j].top; 
+        int bot2=bycicle[j].bot; 
+        int left2=bycicle[j].left; 
+        int right2=bycicle[j].right;
+        int top3=0;int bot3=0;int left3=0;int right3=0;
+        if (k!=-1){
+            top3=helmet[k].top;  
+            bot3=helmet[k].bot;  
+            left3=helmet[k].left;  
+            right3=helmet[k].right;
+        }
+        int ii=0;
+        if (left1>0.75*left2-1&&right1*0.75-1<right2&&top1*0.75-1<top2&&bot1*0.75-1<bot2){
+            //draw_box_width(im, min(left1,left2), min(top1,top2), max(right1,right2), max(bot1,bot2), width, red, green, blue);
             if (alphabet) {
-                image label = get_label(alphabet, names[class], (im.h*.03)/10);
-                draw_label(im, top + width, left, label, rgb);
+                image label;
+                if ((k!=-1)&&(left3>0.93*left1)&&(right3*0.93<right1)){
+                    rgb[0]=(int)(red+5);
+                    rgb[1]=(int)(green+5);
+                    rgb[2]=(int)(blue*+5);
+
+                    draw_box_width(im, min(left1,left2), min(top1,top2), max(right1,right2), max(bot1,bot2), width, (int)(red+5), (int)(green+5), (int)(blue+5));
+                    label = get_label(alphabet, "bicyclist with helmet", (im.h*.03)/10);
+                    //printf("%s\n","helmet");    
+                }
+                else{
+                    draw_box_width(im, min(left1,left2), min(top1,top2), max(right1,right2), max(bot1,bot2), width, red, green, blue);
+                    label = get_label(alphabet, "bicyclist without helmet", (im.h*.03)/10);
+                }
+
+                draw_label(im, min(top1,top2) + width, min(left1,left2), label, rgb);
                 free_image(label);
             }
         }
