@@ -51,7 +51,7 @@ int nearest_bycicle(mystruct person,mystruct* bycicle,int l){
         //printf("len2:%i\n",len2);
         if (len2>len1){
             len1=len2;
-            index=i;
+            index=i; /* hmm should this go outside or nah? */
         }
     }       
     if (len1==-10)

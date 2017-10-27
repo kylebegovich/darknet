@@ -12,25 +12,25 @@
 #define DEMO 1
 #define SAVEVIDEO
 // #define THREADLINE
+
 #ifdef SAVEVIDEO
 static CvVideoWriter *mVideoWriter;
 #endif
+
 #ifdef OPENCV
-
-
 static char **demo_names;
-static char **demo_names2;
+static char **demo_names2; // for the second Yolo
 static image **demo_alphabet;
 static int demo_classes;
-static int demo_classes2;
+static int demo_classes2; // for the second Yolo
 
 static float ***probs; // **probs to ***probs
 static box **boxes; // *boxes to **boxes
 static network net;
-static network net2;
+static network net2; // second network
 static image buff [3];
 static image buff_letter[3];
-static image buff_letter2[3];
+static image buff_letter2[3]; // for second Yolo
 static int buff_index = 0;
 static CvCapture * cap;
 static IplImage  * ipl;
@@ -41,7 +41,7 @@ static float demo_thresh2 = 0;
 static float demo_hier = .5;
 static int running = 0;
 
-//added counter
+// added counter
 static int counter;
 static info * result;
 
@@ -262,6 +262,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     */
     cuda_set_device(0);
     net = parse_network_cfg(cfgfile);
+    
     /* 
     *   set the network default gpu to 0 
     */
@@ -293,7 +294,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     set_batch_network(&net2, 1);
 
     srand(2222222);
-
 
     /*
     *   Loading frame from frame or webcam 
@@ -337,7 +337,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         }
     }
 
-
     /*
     *   setting up layer, demo_detection, avg, from first network
     */
@@ -368,14 +367,17 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     /*
     *   Set up the boxes and probs for both predictions
     */  
+
     // added another layer for boxes
     boxes = (box **)calloc(YOLO, sizeof(box*));
     boxes[0] = (box*) calloc(l.w*l.h*l.n, sizeof(box));
     boxes[1] = (box*) calloc(l2.w*l2.h*l2.n, sizeof(box));
+
     // added another layer for probs
     probs = (float ***)calloc(YOLO, sizeof(float **));
     probs[0] = (float**) calloc(l.w*l.h*l.n, sizeof(float *));
     probs[1] = (float**) calloc(l2.w*l2.h*l2.n, sizeof(float*));
+
     for (j = 0; j < l.w*l.h*l.n; ++j) {
         probs[0][j] = (float *)calloc(l.classes+1, sizeof(float));
     }
@@ -389,6 +391,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff[0] = get_image_from_stream(cap);
     buff[1] = copy_image(buff[0]);
     buff[2] = copy_image(buff[0]);
+
     /*
     *   individual image to put into the two networks
     *   (because of the network width and height are different)
@@ -396,6 +399,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff_letter[0] = letterbox_image(buff[0], net.w, net.h);
     buff_letter[1] = letterbox_image(buff[0], net.w, net.h);
     buff_letter[2] = letterbox_image(buff[0], net.w, net.h);
+
     buff_letter2[0] = letterbox_image(buff[0], net2.w, net2.h);
     buff_letter2[1] = letterbox_image(buff[0], net2.w, net2.h);
     buff_letter2[2] = letterbox_image(buff[0], net2.w, net2.h);
@@ -560,9 +564,11 @@ void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float th
         ++count;
     }
 }
+
 #else
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg, float hier, int w, int h, int frames, int fullscreen)
 {
     fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
 }
+
 #endif
