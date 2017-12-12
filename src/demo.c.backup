@@ -9,13 +9,9 @@
 #include "demo.h"
 #include <sys/time.h>
 #include "alpr_c.h"
-// #define STB_IMAGE_IMPLEMENTATION
-// #include "stb_image.h"
-// #define STB_IMAGE_WRITE_IMPLEMENTATION
-// #include "stb_image_write.h"
 
 #define DEMO 1
-#define SAVEVIDEO 1
+#define SAVEVIDEO
 // #define THREADLINE
 
 #ifdef SAVEVIDEO
@@ -203,7 +199,7 @@ void* draw_detection_in_thread(void *ptr)
 {
     image display = buff[(buff_index+2) % 3];
     //  duplicate function of draw_detections that writes the info of detected obj to result
-    draw_detections2(display, demo_detections, demo_detections2, demo_thresh, demo_thresh, boxes[0], boxes[1],boxes[2], probs[0], probs[1], 0, demo_names, demo_names2, demo_alphabet, demo_classes,demo_classes2);
+    draw_detections2(display, demo_detections, demo_detections2, demo_thresh, demo_thresh, boxes[0], boxes[1], probs[0], probs[1], 0, demo_names, demo_names2, demo_alphabet, demo_classes,demo_classes2);
 
 }
 
@@ -246,97 +242,9 @@ void *counter_func(void *ptr)
     return 0;
 }
 
-static struct AlprCRegionOfInterest roi = {0, 0, 10000, 10000};
-// roi.x = 0;
-// roi.y = 0;
-// roi.width = 10000;
-// roi.height = 10000;
-
-void * alpr_in_thread(void * alpr) {
-    image im = buff[(buff_index+2)%3];
-    // save_image_png(im, "temp");
-    // unsigned char * buffer;
-    // long long len = read_file("temp.png", &buffer);
-    // char* _response = openalpr_recognize_encodedimage(alpr, buffer, len, roi);
-    // free(buffer);
-
-    // formatting data
-    unsigned char *data = calloc(im.w*im.h*im.c, sizeof(char));
-    int i,k;
-    for(k = 0; k < im.c; ++k){
-        for(i = 0; i < im.w*im.h; ++i){
-            data[i*im.c+k] = (unsigned char) (255*im.data[i + k*im.w*im.h]);
-        }
-    }
-
-
-
-    // int len;
-    // int stride_bytes = im.w*im.c;
-    // unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, im.w, im.h, im.c, &len);
-    char * plate_response = openalpr_recognize_rawimage(alpr, data, 3, im.w, im.h, roi);
-    // free(data);
-    // free(png);
-
-
-    printf("Plates coordinates:\n%s\n", plate_response);
-    char * curr = plate_response;
-    int result_count = 0;
-    int x1 = im.w, x2 = 0, y1 = im.h, y2 = 0;
-    while (curr = strstr(curr, "coordinates")) {
-        x1 = 10000;
-        x2 = 0;
-        y1 = 10000;
-        y2 = 0;
-        printf("Plate No. %d:\n", result_count);
-        for (int i = 0; i < 4; i++) {
-            curr = strstr(curr, "x") + 3;
-            int x = get_int(curr);
-            if (x < x1) x1 = x;
-            if (x > x2) x2 = x;
-            printf("x:%d\n", x);
-            curr = strstr(curr, "y") + 3;
-            int y = get_int(curr);
-            if (y < y1) y1 = y;
-            if (y > y2) y2 = y;
-            printf("y:%d\n", y);
-        }
-        // store our detections to boxes[2]
-        int cx = (x1+x2)/2;//center
-        int cy = (y1+y2)/2;//center
-        int w = x2 - x1;
-        int h = y2 - y1;
-        boxes[2][result_count].x = cx;
-        boxes[2][result_count].y = cy;
-        boxes[2][result_count].w = w;
-        boxes[2][result_count].h = h;
-        printf("Plate coordinates(x1,y1,x2,y2): %d, %d, %d, %d\n",x1, y1, x2, y2);
-        printf("Plate coordinate(xywh): %d, %d, %d, %d\n", cx, cy ,w, h);
-        result_count++;
-    }
-    printf("Total plates cousnt: %d\n", result_count);
-    openalpr_free_response_string(plate_response);
-}
-
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
-    // Openalpr setup
-    printf("Initializing openalpr...");
-    OPENALPR* alpr = openalpr_init("us", "./openalpr.conf", "./runtime_data");
-    openalpr_set_topn(alpr, 20);
-    openalpr_set_default_region(alpr, "md");
-    if (openalpr_is_loaded(alpr) == 0)
-    {
-        printf("Error loading OpenALPR\n");
-        return 1;
-    }
-    // struct AlprCRegionOfInterest roi;
-    // roi.x = 0;
-    // roi.y = 0;
-    // roi.width = 10000;
-    // roi.height = 10000;
-
-
+    openalpr_init("us", "./openalpr.conf", "./runtime_data");
     /*
     *   Prediction one set up
     */
@@ -416,7 +324,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     if(cap){
         int mfps = cvGetCaptureProperty(cap,CV_CAP_PROP_FPS);
         mVideoWriter = cvCreateVideoWriter("Output.avi",CV_FOURCC('M','J','P','G'),mfps,cvSize(cvGetCaptureProperty(cap,CV_CAP_PROP_FRAME_WIDTH),cvGetCaptureProperty(cap,CV_CAP_PROP_FRAME_HEIGHT)),1);
-        // mVideoWriter = cvCreateVideoWriter("Output2.mp4",CV_FOURCC('M','P','4','2'),mfps,cvSize(cvGetCaptureProperty(cap,CV_CAP_PROP_FRAME_WIDTH),cvGetCaptureProperty(cap,CV_CAP_PROP_FRAME_HEIGHT)),1);
     }
     #endif
 
@@ -463,10 +370,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     */
 
     // added another layer for boxes
-    boxes = (box **)calloc(YOLO+1, sizeof(box*)); // Add another pointer
+    boxes = (box **)calloc(YOLO, sizeof(box*));
     boxes[0] = (box*) calloc(l.w*l.h*l.n, sizeof(box));
     boxes[1] = (box*) calloc(l2.w*l2.h*l2.n, sizeof(box));
-    boxes[2] = (box*) calloc(100, sizeof(box)); // Boxes for alpr detection. Assumes no more than 100 plate detections
 
     // added another layer for probs
     probs = (float ***)calloc(YOLO, sizeof(float **));
@@ -487,7 +393,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff[1] = copy_image(buff[0]);
     buff[2] = copy_image(buff[0]);
 
-
     /*
     *   individual image to put into the two networks
     *   (because of the network width and height are different)
@@ -507,7 +412,6 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     pthread_t detect_thread;
     pthread_t fetch_thread;
     pthread_t counter_thread; /*added counter thread */
-    pthread_t alpr_thread; /*added alpr thread*/
 
     int count = 0;
     demo_time = get_wall_time();
@@ -518,29 +422,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         #ifdef THREADLINE
         if(pthread_create(&counter_thread, 0, counter_func, 0)) error("Counter Thread creation failed"); /* create the counter thread*/
         #endif
-        if (pthread_create(&alpr_thread, 0, alpr_in_thread, alpr)) error("Thread creation failed");
-
         image im = buff[(buff_index + 1)%3];
-
-        // char * plate_response = openalpr_recognize_rawimage(alpr, im.data, 4,im.w, im.h, roi);
-        // printf("Plates coordinates:\n%s\n", plate_response);
-        // char * curr = plate_response;
-        // int result_count = 0;
-        // while (curr = strstr(curr, "coordinates")) {
-        //     result_count++;
-        //     printf("Plate No. %d:\n", result_count);
-        //     for (int i = 0; i < 4; i++) {
-        //         curr = strstr(curr, "x") + 3;
-        //         int x = get_int(curr);
-        //         printf("x:%d\n", x);
-        //         curr = strstr(curr, "y") + 3;
-        //         int y = get_int(curr);
-        //         printf("y:%d\n", y);
-        //     }
-        // }
-        // printf("Total plates count: %d\n", result_count);
-        // openalpr_free_response_string(plate_response);
-
 
         if(!prefix){
             fps = 1./(get_wall_time() - demo_time);
@@ -573,13 +455,10 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         #ifdef THREADLINE
         pthread_join(counter_thread, 0); /* joins the counter_thread back to main process */
         #endif
-        pthread_join(alpr_thread, 0);
         ++count;
 
     }
     free(result);
-
-    openalpr_cleanup(alpr);
 }
 
 void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
@@ -685,7 +564,6 @@ void demo_compare(char *cfg1, char *weight1, char *cfg2, char *weight2, float th
         pthread_join(detect_thread, 0);
         ++count;
     }
-
 }
 
 #else

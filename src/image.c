@@ -409,7 +409,7 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
  *  alphebet : array that maps word to alphebet to be drawn
  *  classes, classes2 : the number of predictable classes for network 1 and 2
  */
-void draw_detections2(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2){
+void draw_detections2(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, box* boxes3, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2){
 
     int i;
     mystruct* person=malloc(sizeof(mystruct)*1000);
@@ -602,6 +602,34 @@ void draw_detections2(image im, int num, int num2, float thresh, float thresh2, 
             }
         }
     }
+    int idx = 0;
+    while (boxes3[idx].x) {
+        int width = im.h * .006;
+        int offset = 1*123457 % classes;
+        float red = get_color(2,offset,classes);
+        float green = get_color(1,offset,classes);
+        float blue = get_color(0,offset,classes);
+        float rgb[3];
+        rgb[0]=red;
+        rgb[1]=green;
+        rgb[2]=blue;
+
+        box b = boxes3[idx];
+        printf("Plate coordinate(xywh): %d, %d, %d, %d\n", (int)b.x, (int)b.y, (int)b.w, (int)b.h);
+        int left  = ((int)b.x-(int)b.w/2);
+        int right = ((int)b.x+(int)b.w/2);
+        int top   = ((int)b.y-(int)b.h/2);
+        int bot   = ((int)b.y+(int)b.h/2);
+        if (alphabet) {
+            printf("====================\ndrawing left: %d, right: %d, top: %d, bottom: %d, \n====================\n", left, right, top, bot);
+            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            image label = get_label(alphabet, "license plate", (im.h*.03)/10);
+            draw_label(im, top + width, left, label, rgb);
+            free_image(label);
+        }
+        idx++;
+    }
+    memset(boxes3, 0, 100*sizeof(box));
 }
 
 /*

@@ -19,7 +19,7 @@ void show_image_cv(image p, const char *name, IplImage *disp);
 #endif
 #endif
 
-
+// void draw_detections2(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, box* boxes3, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2);
 void draw_vertical_line(image a, int x, int w, float r, float g, float b);
 
 float get_color(int c, int x, int max);
