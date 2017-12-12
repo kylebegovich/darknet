@@ -27,23 +27,31 @@ static CvVideoWriter *mVideoWriter;
 #ifdef OPENCV
 static char **demo_names;
 static char **demo_names2; // for the second Yolo
+static char **demo_names3; // for the third Yolo
+
 static image **demo_alphabet;
+
 static int demo_classes;
 static int demo_classes2; // for the second Yolo
+static int demo_classes3;
 
 static float ***probs; // **probs to ***probs
 static box **boxes; // *boxes to **boxes
 static network net;
 static network net2; // second network
+static network net3;
 static image buff [3];
 static image buff_letter[3];
 static image buff_letter2[3]; // for second Yolo
+static image buff_letter3[3];
+
 static int buff_index = 0;
 static CvCapture * cap;
 static IplImage  * ipl;
 static float fps = 0;
 static float demo_thresh = 0;
 static float demo_thresh2 = 0;
+static float demo_thresh3 = 0;
 
 static float demo_hier = .5;
 static int running = 0;
@@ -53,17 +61,21 @@ static int counter;
 static info * result;
 
 // added the number of instances for YOLO
-static int YOLO = 2;
+static int YOLO = 3;
 
 static int demo_frame = 5;
 static int demo_detections = 0;
 static int demo_detections2 = 0;
+static int demo_detections3 = 0;
 static float ***predictions; // **predictions to ***predictions
 static int demo_index = 0;
 static int demo_index2 = 0;
+static int demo_index3 = 0;
 static int demo_done = 0;
 static float *avg;
 static float *avg2;
+static float *avg3;
+
 double demo_time;
 
 
@@ -106,6 +118,13 @@ void *detect_in_thread(void *ptr)
     mean_arrays(predictions[1], demo_frame, l2.outputs, avg2);
     l2.output = avg2;
 
+    layer l3 = net3.layers[net3.n-1];
+    float *X3 = buff_letter3[(buff_index+2)%3].data;
+    float *prediction3 = network_predict(net3, X3);
+    memcpy(predictions[2][demo_index], prediction3, l3.outputs*sizeof(float));
+    mean_arrays(predictions[2], demo_frame, l3.outputs, avg3);
+    l3.output = avg3;
+
     /*
     *   set up the boxes and probs from prediction for first network
     */
@@ -131,14 +150,24 @@ void *detect_in_thread(void *ptr)
     if (nms > 0) do_nms_obj(boxes[1], probs[1], l2.w*l2.h*l2.n, l2.classes, nms);
 
 
+    if(l3.type == DETECTION){
+        get_detection_boxes(l3 , 1, 1, demo_thresh, probs[2], boxes[2], 0);
+    } else if (l3.type == REGION){
+        get_region_boxes(l3, buff[0].w, buff[0].h, net3.w, net3.h, demo_thresh, probs[2], boxes[2], 0, 0, 0, demo_hier, 1);
+    } else {
+        error("Last layer must produce detections\n");
+    }
+    if (nms > 0) do_nms_obj(boxes[2], probs[2], l3.w*l3.h*l3.n, l3.classes, nms);
+
+
     // printf("\033[2J");
     // printf("\033[1;1H");
     printf("\n\n\nFPS:%.1f\n",fps);
     printf("Objects:\n");
-    image display = buff[(buff_index+2) % 3];
-    //draw_detections(display, demo_detections, demo_thresh, boxes[0], probs[0], 0, demo_names, demo_alphabet, demo_classes);
+    // image display = buff[(buff_index+2) % 3];
+    // //draw_detections(display, demo_detections, demo_thresh, boxes[0], probs[0], 0, demo_names, demo_alphabet, demo_classes);
 
-    draw_detections_demo(display, demo_detections, demo_detections2, demo_thresh, demo_thresh, boxes[0], boxes[1], probs[0], probs[1], 0, demo_names, demo_names2, demo_alphabet, demo_classes, demo_classes2);
+    // draw_detections_demo(display, demo_detections, demo_detections2, demo_thresh, demo_thresh, boxes[0], boxes[1], probs[0], probs[1], 0, demo_names, demo_names2, demo_alphabet, demo_classes, demo_classes2);
 
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
@@ -156,6 +185,8 @@ void *fetch_in_thread(void *ptr)
     /* Setting up both images to be read into the networks */
     letterbox_image_into(buff[buff_index], net.w, net.h, buff_letter[buff_index]);
     letterbox_image_into(buff[buff_index], net2.w, net2.h, buff_letter2[buff_index]);
+    letterbox_image_into(buff[buff_index], net3.w, net3.h, buff_letter3[buff_index]);
+
     if(status == 0) demo_done = 1;
     return 0;
 }
@@ -209,7 +240,9 @@ void* draw_detection_in_thread(void *ptr)
 {
     image display = buff[(buff_index+2) % 3];
     //  duplicate function of draw_detections that writes the info of detected obj to result
-    draw_detections2(display, demo_detections, demo_detections2, demo_thresh, demo_thresh, boxes[0], boxes[1],boxes[2], probs[0], probs[1], 0, demo_names, demo_names2, demo_alphabet, demo_classes,demo_classes2);
+    //draw_detections2(display, demo_detections, demo_detections2, demo_thresh, demo_thresh, boxes[0], boxes[1],boxes[2], probs[0], probs[1], 0, demo_names, demo_names2, demo_alphabet, demo_classes,demo_classes2);
+    draw_detections_demo(display, demo_detections, demo_detections2, demo_detections3, demo_thresh, demo_thresh, demo_thresh, boxes[0], boxes[1], boxes[2], boxes[3], probs[0], probs[1], probs[2], 0, demo_names, demo_names2, demo_names3, demo_alphabet, demo_classes, demo_classes2, demo_classes3);
+
 
 }
 
@@ -313,10 +346,10 @@ void * alpr_in_thread(void * alpr) {
         int cy = (y1+y2)/2;//center
         int w = x2 - x1;
         int h = y2 - y1;
-        boxes[2][result_count].x = cx;
-        boxes[2][result_count].y = cy;
-        boxes[2][result_count].w = w;
-        boxes[2][result_count].h = h;
+        boxes[3][result_count].x = cx;
+        boxes[3][result_count].y = cy;
+        boxes[3][result_count].w = w;
+        boxes[3][result_count].h = h;
         printf("Plate coordinates(x1,y1,x2,y2): %d, %d, %d, %d\n",x1, y1, x2, y2);
         printf("Plate coordinate(xywh): %d, %d, %d, %d\n", cx, cy ,w, h);
         result_count++;
@@ -424,6 +457,20 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     load_weights(&net2, weightfile2);
     set_batch_network(&net2, 1);
 
+    list *options3 = read_data_cfg("cfg/obj.data");
+    demo_classes3 = option_find_int(options3, "classes", 1);
+    char *name_list2 = option_find_str(options3, "names", "cfg/obj.list");
+    demo_names3 = get_labels(name_list2);
+    demo_thresh3 = thresh;
+    char *cfgfile3 = "cfg/yolo-helmet-detect.cfg";
+    char *weightfile3 = "yolo-helmet_10000.weights";
+
+    ///
+    net3 = parse_network_cfg(cfgfile3);
+    net3.gpu_index = 1;
+    load_weights(&net3, weightfile3);
+    set_batch_network(&net3, 1);
+
     srand(2222222);
 
     /*
@@ -483,6 +530,11 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     demo_detections2 = l2.n*l2.w*l2.h;
     avg2 = (float *) calloc(l2.outputs, sizeof(float));
 
+    ///
+    layer l3 = net3.layers[net3.n-1];
+    demo_detections3 = l3.n*l3.w*l3.h;
+    avg3 = (float *) calloc(l3.outputs, sizeof(float));
+
     /*
     *   Set up the prediction array for both detections
     */
@@ -494,6 +546,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     for (j = 0; j < demo_frame; ++j) {
          predictions[0][j] = (float *) calloc(l.outputs, sizeof(float));
          predictions[1][j] = (float *) calloc(l2.outputs, sizeof(float));
+         predictions[2][j] = (float *) calloc(l3.outputs, sizeof(float));
     }
 
     /*
@@ -504,18 +557,23 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     boxes = (box **)calloc(YOLO+1, sizeof(box*)); // Add another pointer
     boxes[0] = (box*) calloc(l.w*l.h*l.n, sizeof(box));
     boxes[1] = (box*) calloc(l2.w*l2.h*l2.n, sizeof(box));
-    boxes[2] = (box*) calloc(100, sizeof(box)); // Boxes for alpr detection. Assumes no more than 100 plate detections
+    boxes[2] = (box*) calloc(l3.w*l3.h*l3.n, sizeof(box));
+    boxes[3] = (box*) calloc(100, sizeof(box)); // Boxes for alpr detection. Assumes no more than 100 plate detections
 
     // added another layer for probs
     probs = (float ***)calloc(YOLO, sizeof(float **));
     probs[0] = (float**) calloc(l.w*l.h*l.n, sizeof(float *));
     probs[1] = (float**) calloc(l2.w*l2.h*l2.n, sizeof(float*));
+    probs[2] = (float**) calloc(l3.w*l3.h*l3.n, sizeof(float*));
 
     for (j = 0; j < l.w*l.h*l.n; ++j) {
         probs[0][j] = (float *)calloc(l.classes+1, sizeof(float));
     }
     for(j = 0; j <l2.w*l2.h*l2.n; ++j){
         probs[1][j] = (float *)calloc(l2.classes+1, sizeof(float));
+    }
+    for (j = 0; j < l3.w*l3.h*l3.n; ++j) {
+       probs[2][j] = (float *)calloc(l3.classes+1, sizeof(float));
     }
 
     /*
@@ -524,6 +582,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff[0] = get_image_from_stream(cap);
     buff[1] = copy_image(buff[0]);
     buff[2] = copy_image(buff[0]);
+    buff[3] = copy_image(buff[0]);
 
 
     /*
@@ -537,6 +596,11 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     buff_letter2[0] = letterbox_image(buff[0], net2.w, net2.h);
     buff_letter2[1] = letterbox_image(buff[0], net2.w, net2.h);
     buff_letter2[2] = letterbox_image(buff[0], net2.w, net2.h);
+    
+    buff_letter3[0] = letterbox_image(buff[0], net3.w, net3.h);
+    buff_letter3[1] = letterbox_image(buff[0], net3.w, net3.h);
+    buff_letter3[2] = letterbox_image(buff[0], net3.w, net3.h);
+
     ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
 
     /*
@@ -590,9 +654,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             save_video(im, mVideoWriter); /* save the current frame */
             #endif
             /* draw the detection */
-            //draw_detection_in_thread(0);
+            draw_detection_in_thread(0);
             /* uncommet to see display */
-            display_in_thread(0);
+            //display_in_thread(0);
         }
         else {
             char name[256];

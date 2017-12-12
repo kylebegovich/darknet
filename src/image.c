@@ -723,7 +723,14 @@ void draw_detections_info(image im, int num, float thresh, box *boxes, float **p
     result[0].n = l-1;
 }
 
-void draw_detections_demo(image im, int num, int num2, float thresh, float thresh2, box *boxes, box* boxes2, float **probs, float **probs2, float **masks, char **names, char **names2, image **alphabet, int classes, int classes2)
+
+/*
+0 - yolo
+1 - helmet yolo
+2 - face yolo
+3 - alpr
+*/
+void draw_detections_demo(image im, int num, int num2, int num3, float thresh, float thresh2, float thresh3, box *boxes, box* boxes2, box* boxes3, box* boxes4, float **probs, float **probs2, float **probs3, float **masks, char **names, char **names2, char **names3, image **alphabet, int classes, int classes2, int classes3)
 {
     int i;
 
@@ -802,6 +809,72 @@ void draw_detections_demo(image im, int num, int num2, float thresh, float thres
             }
         }
     }
+    for(i = 0; i < num3; ++i){
+        int class = max_index(probs3[i], classes3);
+        float prob = probs3[i][class];
+        if(prob > thresh){
+            int width = im.h * .006;
+
+            printf("%s: %.0f%%\n", names3[class], prob*100);
+            int offset = class*123457 % classes3;
+            float red = get_color(2,offset,classes3);
+            float green = get_color(1,offset,classes3);
+            float blue = get_color(0,offset,classes3);
+            float rgb[3];
+
+            rgb[0] = red;
+            rgb[1] = green;
+            rgb[2] = blue;
+            box b = boxes3[i];
+            // b.x and b.y indicates the center of the box
+            // below is calcuating the position of left,right,top,bot respective to the im.h
+            int left  = (b.x-b.w/2.)*im.w;
+            int right = (b.x+b.w/2.)*im.w;
+            int top   = (b.y-b.h/2.)*im.h;
+            int bot   = (b.y+b.h/2.)*im.h;
+
+            if(left < 0) left = 0;
+            if(right > im.w-1) right = im.w-1;
+            if(top < 0) top = 0;
+            if(bot > im.h-1) bot = im.h-1;
+
+            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            if (alphabet) {
+                image label = get_label(alphabet, names3[class], (im.h*.03)/10);
+                draw_label(im, top + width, left, label, rgb);
+                free_image(label);
+            }
+        }
+    }
+
+    int idx = 0;
+    while (boxes4[idx].x) {
+        int width = im.h * .006;
+        int offset = 1*123457 % classes;
+        float red = get_color(2,offset,classes);
+        float green = get_color(1,offset,classes);
+        float blue = get_color(0,offset,classes);
+        float rgb[3];
+        rgb[0]=red;
+        rgb[1]=green;
+        rgb[2]=blue;
+
+        box b = boxes4[idx];
+        printf("Plate coordinate(xywh): %d, %d, %d, %d\n", (int)b.x, (int)b.y, (int)b.w, (int)b.h);
+        int left  = ((int)b.x-(int)b.w/2);
+        int right = ((int)b.x+(int)b.w/2);
+        int top   = ((int)b.y-(int)b.h/2);
+        int bot   = ((int)b.y+(int)b.h/2);
+        if (alphabet) {
+            printf("====================\ndrawing left: %d, right: %d, top: %d, bottom: %d, \n====================\n", left, right, top, bot);
+            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            image label = get_label(alphabet, "license plate", (im.h*.03)/10);
+            draw_label(im, top + width, left, label, rgb);
+            free_image(label);
+        }
+        idx++;
+    }
+    memset(boxes4, 0, 100*sizeof(box));
 
 }
 
