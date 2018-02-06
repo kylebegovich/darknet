@@ -16,11 +16,15 @@
 // #include "stb_image_write.h"
 
 
-#define DEMO 1
-#define SAVEVIDEO 1
+
+/*
+ *  CHANGE DEMO AND SAVEVIDEO TO 1 TO RUN VIDEOS
+ */
+#define DEMO 0
+#define SAVEVIDEO 0
 // #define THREADLINE
 
-#ifdef SAVEVIDEO
+#if SAVEVIDEO
 static CvVideoWriter *mVideoWriter;
 #endif
 
